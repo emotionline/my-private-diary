@@ -5,12 +5,12 @@ from st_supabase_connection import SupabaseConnection, execute_query
 # --- [1] 페이지 기본 세팅 ---
 st.set_page_config(page_title="My Private Diary", page_icon="📝", layout="centered")
 
-# --- [2] Supabase DB 연결 ---
+# --- [2] Supabase DB 연결 (Secrets 경로 수정 반영) ---
 st_supabase = st.connection(
     name="supabase",
     type=SupabaseConnection,
-    url=st.secrets["SUPABASE_URL"],
-    key=st.secrets["SUPABASE_KEY"]
+    url=st.secrets["supabase"]["SUPABASE_URL"],  # ["supabase"] 그룹 추가!
+    key=st.secrets["supabase"]["SUPABASE_KEY"]   # ["supabase"] 그룹 추가!
 )
 
 # --- [3] 로그인 시스템 세팅 ---
