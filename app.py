@@ -12,7 +12,7 @@ st.markdown("""
     <style>
     /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
     .stApp {
-        background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTM_VAy0QgLUb6S5NTYgUJkZlLrPQl3dsJDw&s");
+        background-image: url("https://godomall.speedycdn.net/2e919bf214683d1eacc8bfe94c87618e/goods/2677/image/detail/2677_detail_09.png");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
