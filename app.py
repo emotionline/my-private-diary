@@ -9,7 +9,7 @@ st.set_page_config(page_title="My Video Diary", page_icon="✨", layout="centere
 
 # --- [2] 비디오 배경 주입 + 필름 제거 + 가독성 확보 CSS ---
 # ⚠️ 아래 "민주_영상_링크.mp4" 부분에 실제 mp4 파일 주소를 넣으시면 됩니다!
-VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-starry-outer-space-background-40019-large.mp4" # 예시 몽환적인 영상
+VIDEO_URL = "https://www.youtube.com/watch?v=SdHQkkRc-hc&list=RDSdHQkkRc-hc&start_radio=1" # 예시 몽환적인 영상
 
 st.markdown(f"""
     <style>
