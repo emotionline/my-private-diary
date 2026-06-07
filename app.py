@@ -47,7 +47,7 @@ st.markdown("""
 # --- [3] 🎵 내 다이어리 배경음악(BGM) 설정 🎵 ---
 # 웹 브라우저 정책상 '음소거(muted)'가 아니면 자동 재생이 기본 차단되지만, 
 # 사용자가 화면을 한 번 클릭하거나 로그인 버튼을 누르는 순간 자물쇠가 풀리며 오디오가 재생됩니다!
-AUDIO_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" # ◀ 예시 오디오 파일 주소
+AUDIO_URL = "https://www.youtube.com/watch?v=Ai6FLQmajaI&list=RDAi6FLQmajaI&start_radio=1" # ◀ 예시 오디오 파일 주소
 
 st.markdown(f"""
     <audio autoplay loop id="bgm-audio" style="display:none;">
