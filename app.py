@@ -5,7 +5,7 @@ from st_supabase_connection import SupabaseConnection, execute_query
 # --- [1] 페이지 기본 세팅 ---
 st.set_page_config(page_title="My Private Diary", page_icon="📝", layout="centered")
 
-# --- [2] Supabase DB 연결 (Secrets 경로 수정 반영) ---
+# --- [2] Supabase DB 연결 ---
 st_supabase = st.connection(
     name="supabase",
     type=SupabaseConnection,
@@ -13,7 +13,7 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]
 )
 
-# --- [3] 로그인 시스템 세팅 영역 ---
+# --- [3] 로그인 시스템 세팅 (v0.2.3 완벽 호환 스펙) ---
 credentials = {
     "usernames": {
         "admin": {
@@ -24,26 +24,16 @@ credentials = {
     }
 }
 
-# 1. authenticator 객체 생성
+# v0.2.3 스펙: cookie_key가 아니라 그냥 key를 사용합니다.
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="diary_session",
-    cookie_key="secret_signature_key",
+    key="secret_signature_key",  # ◀ key로 원복!
     cookie_expiry_days=7
 )
 
-# 2. 안전하게 로그인 함수 호출 및 변수 할당
-try:
-    authenticator.login(location='main')
-    
-    # 최신 v0.3.x 스펙: 세션 스테이트에서 인증 상태 바인딩
-    authentication_status = st.session_state.get("authentication_status")
-    username = st.session_state.get("username")
-    name = st.session_state.get("name")
-
-except TypeError:
-    # 구버전(0.2.x) 호환용 롤백 코드
-    name, authentication_status, username = authenticator.login('로그인', 'main')
+# v0.2.3 스펙: login 함수가 이름, 인증 상태, 유저명을 직접 반환합니다.
+name, authentication_status, username = authenticator.login('로그인', 'main')
 
 # --- [4] 화면 렌더링 분기 ---
 if authentication_status == False:
