@@ -4,31 +4,49 @@ from st_supabase_connection import SupabaseConnection, execute_query
 from datetime import datetime
 import pytz
 
-# --- [1] 페이지 기본 세팅 및 화사한 커스텀 테마 (CSS) ---
+# --- [1] 페이지 기본 세팅 ---
 st.set_page_config(page_title="My Bright Diary", page_icon="✨", layout="centered")
 
-# 눈이 편안하고 화사한 파스텔톤 배경 및 UI 스타일 적용
+# --- [2] 아일릿 배경 테마 + 가독성 극대화 커스텀 CSS ---
 st.markdown("""
     <style>
+    /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
     .stApp {
-        background: linear-gradient(135deg, #f5fafd 0%, #e8f5e9 100%);
+        background-image: url("https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=1200"); /* 몽환적인 스파클/라이트 감성 배경 */
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
     }
-    h1, h2, h3 {
-        color: #2c3e50 !important;
+    
+    /* 글씨가 묻히지 않도록 메인 컨텐츠 영역에 반투명 글래스 패널 적용 */
+    .block-container {
+        background: rgba(255, 255, 255, 0.85); /* 85% 불투명 흰색으로 글씨 완벽 보호 */
+        padding: 3rem 2rem !important;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* 제목 및 텍스트 가독성 고정 */
+    h1, h2, h3, label, p {
+        color: #1a252f !important;
         font-family: 'Pretendard', sans-serif;
+        font-weight: 600;
     }
-    .stButton>button {
-        border-radius: 8px;
-    }
+    
+    /* 지난 기록 익스팬더 스타일 */
     div[data-testid="stExpander"] {
-        background-color: white !important;
+        background-color: rgba(255, 255, 255, 0.95) !important;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        border: 1px solid #e2e8f0;
     }
     </style>
-""", unsafe_allow_html=True)
+""", unsafe-allow_html=True)
 
-# --- [2] Supabase DB 연결 ---
+# --- [3] Supabase DB 연결 ---
 st_supabase = st.connection(
     name="supabase",
     type=SupabaseConnection,
@@ -36,7 +54,7 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]
 )
 
-# --- [3] DB에서 유저 정보 불러오기 ---
+# --- [4] DB에서 유저 정보 불러오기 ---
 def fetch_users():
     try:
         res = execute_query(st_supabase.table("users").select("*"), ttl=0)
@@ -54,7 +72,7 @@ def fetch_users():
 
 credentials = fetch_users()
 
-# --- [4] 로그인 시스템 설정 (v0.2.3 규격) ---
+# --- [5] 로그인 시스템 설정 (v0.2.3 규격) ---
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="diary_session",
@@ -95,34 +113,34 @@ with tab2:
         else:
             st.warning("모든 항목을 입력해 주세요.")
 
-# --- [5] 화면 렌더링 분기 ---
+# --- [6] 로그인 성공 이후 대시보드 ---
 if authentication_status == False:
     st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
 
 elif authentication_status == None:
-    st.info("로그인이 필요합니다. 기존 계정으로 로그인하거나 새로 가입해 주세요.")
+    st.info("로그인이 필요합니다. 나만의 단단한 기록 공간을 시작해 보세요.")
 
 elif authentication_status:
-    # 로그인 성공 시 대시보드 진입
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.subheader(f"✨ {name}님의 단단한 기록 공간")
+        st.subheader(f"✨ {name}님의 기록 공간")
     with col2:
         authenticator.logout("로그아웃", "main")
         
     st.divider()
 
-    # --- 입력창 초기화를 위한 Session State 세팅 ---
-    if "diary_title_val" not in st.session_state:
-        st.session_state.diary_title_val = ""
-    if "diary_content_val" not in st.session_state:
-        st.session_state.diary_content_val = ""
+    # [핵심] 입력창 동적 초기화를 위한 세션 상태 등록
+    if "input_title" not in st.session_state:
+        st.session_state["input_title"] = ""
+    if "input_content" not in st.session_state:
+        st.session_state["input_content"] = ""
 
-    # 일기 작성 영역 (value를 session_state와 연동)
+    # 일기 작성 영역 (value와 key를 세션 상태에 완전 밀착시켰습니다)
     st.title("📝 오늘의 기록")
     diary_date = st.date_input("날짜 선택")
-    diary_title = st.text_input("제목", value=st.session_state.diary_title_val, placeholder="오늘을 관통하는 한 마디")
-    diary_content = st.text_area("내용", value=st.session_state.diary_content_val, placeholder="생각과 감정을 차분히 정돈해 보세요.", height=200)
+    
+    diary_title = st.text_input("제목", key="diary_title_key", placeholder="오늘을 관통하는 한 마디")
+    diary_content = st.text_area("내용", key="diary_content_key", placeholder="생각과 감정을 차분히 정돈해 보세요.", height=200)
 
     if st.button("일기 저장하기", type="primary"):
         if diary_title and diary_content:
@@ -132,14 +150,17 @@ elif authentication_status:
                 "title": diary_title,
                 "content": diary_content
             }
+            # Supabase 저장
             execute_query(st_supabase.table("diaries").insert(row))
             st.success("클라우드 데이터베이스에 실시간 동기화되었습니다!")
             st.balloons()
             
-            # [핵심] 저장 성공 후 입력값 비워주기
-            st.session_state.diary_title_val = ""
-            st.session_state.diary_content_val = ""
-            st.rerun()  # 화면을 새로고침하면서 입력창이 싹 비워집니다!
+            # [치트키] 입력창 전용 컴포넌트의 내부 state를 강제로 날려버립니다.
+            st.session_state["diary_title_key"] = ""
+            st.session_state["diary_content_key"] = ""
+            
+            # 화면 리프레시로 초기화 100% 반영
+            st.rerun()
         else:
             st.warning("제목과 내용을 모두 입력해 주세요.")
 
@@ -155,19 +176,15 @@ elif authentication_status:
         )
         if response.data:
             for diary in response.data:
-                # 데이터베이스에서 생성 시간 가져오기 및 한국 시간(KST) 변환 처리
                 time_str = ""
                 if "created_at" in diary and diary["created_at"]:
                     try:
-                        # Supabase의 UTC 시간을 파싱
                         utc_time = datetime.fromisoformat(diary["created_at"].replace("Z", "+00:00"))
-                        # 한국 시간대로 변환
                         kst_time = utc_time.astimezone(pytz.timezone("Asia/Seoul"))
-                        time_str = kst_time.strftime(" %H:%M") # 시:분 형식
+                        time_str = kst_time.strftime(" %H:%M")
                     except:
                         time_str = ""
 
-                # 토글 헤더에 날짜와 함께 '시간' 노출!
                 with st.expander(f"📅 {diary['diary_date']}{time_str} | {diary['title']}"):
                     st.write(diary['content'])
         else:
