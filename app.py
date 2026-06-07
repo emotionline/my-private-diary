@@ -1,207 +1,144 @@
 import streamlit as st
-import streamlit_authenticator as stauth
-from st_supabase_connection import SupabaseConnection, execute_query
+import pandas as pd
 from datetime import datetime
-import pytz
 
-# --- [1] 페이지 기본 세팅 ---
-st.set_page_config(page_title="My Music Diary", page_icon="📝", layout="centered")
-
-# --- [2] 아일릿 감성 배경 + 가독성 확보 CSS ---
-st.markdown("""
-    <style>
-    /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
-    .stApp {
-        background-image: url("https://godomall.speedycdn.net/2e919bf214683d1eacc8bfe94c87618e/goods/2677/image/detail/2677_detail_09.png");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }
-    
-    # /* 글씨 가독성을 위한 반투명 화이트 패널 */
-    # .block-container {
-    #     background: rgba(255, 255, 255, 0.85);
-    #     padding: 3rem 2rem !important;
-    #     border-radius: 20px;
-    #     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    #     backdrop-filter: blur(4px);
-    #     -webkit-backdrop-filter: blur(4px);
-    #     margin-top: 2rem;
-    #     margin-bottom: 2rem;
-    # }
-    
-    h1, h2, h3, label, p {
-        color: #2c3e50 !important;
-        font-family: 'Pretendard', sans-serif;
-        font-weight: 600;
-    }
-    
-    div[data-testid="stExpander"] {
-        background-color: rgba(255, 255, 255, 0.95) !important;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- [3] 🎵 내 다이어리 배경음악(BGM) 설정 🎵 ---
-# 웹 브라우저 정책상 '음소거(muted)'가 아니면 자동 재생이 기본 차단되지만, 
-# 사용자가 화면을 한 번 클릭하거나 로그인 버튼을 누르는 순간 자물쇠가 풀리며 오디오가 재생됩니다!
-AUDIO_URL = "https://www.youtube.com/watch?v=Ai6FLQmajaI&list=RDAi6FLQmajaI&start_radio=1" # ◀ 예시 오디오 파일 주소
-
-st.markdown(f"""
-    <audio autoplay loop id="bgm-audio" style="display:none;">
-        <source src="{AUDIO_URL}" type="audio/mp3">
-    </audio>
-    <script>
-    // 브라우저 자동재생 제한을 우회하기 위해 사용자가 화면을 클릭하면 소리가 나도록 유도하는 스크립트
-    document.body.addEventListener('click', function() {{
-        var audio = document.getElementById('bgm-audio');
-        if (audio && audio.paused) {{
-            audio.play();
-        }}
-    }});
-    </script>
-""", unsafe_allow_html=True)
-
-
-# --- [4] Supabase DB 연결 ---
-st_supabase = st.connection(
-    name="supabase",
-    type=SupabaseConnection,
-    url=st.secrets["supabase"]["SUPABASE_URL"],
-    key=st.secrets["supabase"]["SUPABASE_KEY"]
+# 1. 페이지 레이아웃 및 모바일 최적화 세팅
+st.set_page_config(
+    page_title="📦 공주대 기숙사 반띵(Ban-Thing)", 
+    page_icon="📦", 
+    layout="centered"
 )
 
-# --- [5] DB에서 유저 정보 불러오기 ---
-def fetch_users():
-    try:
-        res = execute_query(st_supabase.table("users").select("*"), ttl=0)
-        credentials = {"usernames": {}}
-        if res.data:
-            for user in res.data:
-                credentials["usernames"][user["username"]] = {
-                    "email": user["email"],
-                    "name": user["name"],
-                    "password": str(user["password"])
-                }
-        return credentials
-    except Exception as e:
-        return {"usernames": {}}
+# 2. 로컬 서버 세션 데이터 저장소 (비밀번호 필드 추가)
+if "posts" not in st.session_state:
+    st.session_state.posts = [
+        {
+            "id": 1,
+            "등록시간": "06-08 11:00",
+            "모집품목": "쿠팡 우삼겹 1kg (두 팩 묶음)",
+            "인당 금액": "6,500원",
+            "픽업 장소": "은행사 상가 앞",
+            "총인원": 2,
+            "현재인원": 2,  
+            "비밀번호": "0000", # 예시용
+            "상품 링크": "https://www.coupang.com",
+            "오픈채팅 주소": "https://open.kakao.com/o/demo1"
+        },
+        {
+            "id": 2,
+            "등록시간": "06-08 09:30",
+            "모집품목": "햇반 발아현미밥 24개입",
+            "인당 금액": "1,800원",
+            "픽업 장소": "기숙사 비전관 로비",
+            "총인원": 4,
+            "현재인원": 1,  
+            "비밀번호": "1234", # 예시용
+            "상품 링크": "https://www.coupang.com",
+            "오픈채팅 주소": "https://open.kakao.com/o/demo2"
+        }
+    ]
 
-credentials = fetch_users()
+# 3. 상단 배너 및 이미지
+st.title("🎤 쇼미더 반띵 : N분의 1 (Ban-Thing)")
+st.markdown("### `\"우린 N분의 1, 생필품 짜치게 안 나눠~ 🍚\"`")
 
-# --- [6] 로그인 시스템 설정 ---
-authenticator = stauth.Authenticate(
-    credentials=credentials,
-    cookie_name="diary_session",
-    key="secret_signature_key",
-    cookie_expiry_days=7
-)
+st.image("https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=1000", 
+         caption="Drop the beat 🎧 우린 정확히 N분의 1만 해.", use_container_width=True)
 
-tab1, tab2 = st.tabs(["🔒 로그인", "✍️ 회원가입"])
+st.info("""
+🤝 **공주대 학우들을 위한 무수수료 순수 복지 웹입니다.**  
+귀찮은 회원가입/로그인 없이, 나만의 **마감 비밀번호**만 설정해서 편하게 이용하세요!
+""")
 
-with tab1:
-    name, authentication_status, username = authenticator.login('로그인', 'main')
+st.markdown("---")
 
-with tab2:
-    st.subheader("새 계정 만들기")
-    new_email = st.text_input("이메일", key="reg_email")
-    new_username = st.text_input("아이디(ID)", key="reg_id")
-    new_name = st.text_input("이름(닉네임)", key="reg_name")
-    new_password = st.text_input("비밀번호", type="password", key="reg_pw")
-    
-    if st.button("가입하기", type="secondary"):
-        if new_email and new_username and new_name and new_password:
-            if new_username in credentials["usernames"]:
-                st.error("이미 존재하는 아이디입니다.")
-            else:
-                hashed_passwords = stauth.Hasher([new_password]).encoded_passwords
-                hashed_password = hashed_passwords[0]
-                
-                new_user = {
-                    "username": new_username,
-                    "email": new_email,
-                    "name": new_name,
-                    "password": hashed_password
-                }
-                execute_query(st_supabase.table("users").insert(new_user))
-                st.success("회원가입이 완료되었습니다! 로그인 탭에서 접속하세요.")
-                st.balloons()
-                st.rerun()
-        else:
-            st.warning("모든 항목을 입력해 주세요.")
+# 4. 실시간 매칭 현황판 (카드 UI + 비밀번호 마감 기능)
+st.subheader("🔥 지금 올라온 실시간 반띵 모집")
 
-# --- [7] 로그인 성공 이후 대시보드 ---
-if authentication_status == False:
-    st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
-
-elif authentication_status == None:
-    st.info("로그인이 필요합니다. 나만의 단단한 기록 공간을 시작해 보세요.")
-
-elif authentication_status:
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.subheader(f"✨ {name}님의 기록 공간")
-    with col2:
-        authenticator.logout("로그아웃", "main")
+if st.session_state.posts:
+    for post in st.session_state.posts:
+        is_full = post["현재인원"] >= post["총인원"]
         
-    st.divider()
-
-    # 입력창 초기화 로직
-    if "diary_title_key" not in st.session_state:
-        st.session_state["diary_title_key"] = ""
-    if "diary_content_key" not in st.session_state:
-        st.session_state["diary_content_key"] = ""
-
-    st.title("📝 오늘의 기록")
-    diary_date = st.date_input("날짜 선택")
-    
-    diary_title = st.text_input("제목", key="diary_title_key", placeholder="오늘을 관통하는 한 마디")
-    diary_content = st.text_area("내용", key="diary_content_key", placeholder="생각과 감정을 차분히 정돈해 보세요.", height=200)
-
-    if st.button("일기 저장하기", type="primary"):
-        if diary_title and diary_content:
-            row = {
-                "username": username,
-                "diary_date": str(diary_date),
-                "title": diary_title,
-                "content": diary_content
-            }
-            execute_query(st_supabase.table("diaries").insert(row))
-            st.success("클라우드 데이터베이스에 실시간 동기화되었습니다!")
-            st.balloons()
+        with st.container(border=True):
+            col1, col2 = st.columns([1.8, 1.2])
             
-            st.session_state["diary_title_key"] = ""
-            st.session_state["diary_content_key"] = ""
-            st.rerun()
-        else:
-            st.warning("제목과 내용을 모두 입력해 주세요.")
+            with col1:
+                if is_full:
+                    st.markdown(f"### ~~{post['모집품목']}~~")
+                else:
+                    st.markdown(f"### {post['모집품목']}")
+                    
+                st.caption(f"⏰ 등록: {post['등록시간']} | 📍 장소: {post['픽업 장소']}")
+                st.markdown(f"💰 **인당 금액:** {post['인당 금액']}")
+                
+                if post['상품 링크'] != "링크 없음":
+                    st.markdown(f"🔗 [쿠팡/네이버 상품 확인하기]({post['상품 링크']})")
+            
+            with col2:
+                if is_full:
+                    st.success("✅ 모집 마감")
+                    st.metric(label="인원 현황", value="🔥 만석")
+                else:
+                    st.info("⚡ 모집 중")
+                    st.metric(label="인원 현황", value=f"{post['현재인원']} / {post['총인원']}")
+                    st.link_button("💬 카톡 참여", post["오픈채팅 주소"], use_container_width=True)
+                    
+                    # 📌 무로그인 방장 마감 폼 (토글 형식)
+                    with st.popover("🔒 방장 마감", use_container_width=True):
+                        input_pw = st.text_input("글 만들 때 쓴 비밀번호 입력", type="password", key=f"pw_{post['id']}")
+                        if st.button("마감 확정", key=f"btn_{post['id']}", use_container_width=True):
+                            if input_pw == post["비밀번호"]:
+                                post["현재인원"] = post["총인원"] # 인원 만석 처리
+                                st.success("마감 완료! 새로고침 중...")
+                                st.rerun()
+                            else:
+                                st.error("비밀번호가 틀렸습니다! 😡")
+else:
+    st.write("아직 올라온 소분 글이 없습니다. 첫 번째 글의 주인공이 되어보세요! 😎")
 
-    st.divider()
-    st.subheader("📂 지난 기록 들여다보기")
+st.markdown("---")
+
+# 5. 새로운 소분 모집 글 쓰기 폼 (비밀번호 입력 추가)
+st.subheader("➕ 나도 같이 살 사람 모집하기")
+
+with st.form("match_form", clear_on_submit=True):
+    title = st.text_input("1. 어떤 물품을 나누실 건가요?", placeholder="예: 크리넥스 휴지 30롤, 세제 대용량 등")
+    total_people = st.selectbox("2. 본인을 포함해서 총 몇 명이서 나눌 건가요?", [2, 3, 4, 5, 6, 7, 8, 9, 10], index=0)
+    price = st.text_input("3. 인당 예상 금액은 얼마인가요?", placeholder="예: 인당 3,500원")
+    place = st.selectbox("4. 선호하는 픽업 장소는?", ["기숙사 로비/벤치", "학교 정문 앞", "공주대 후문/대학가", "자취방 근처 (상세 기재)"])
+    prod_link = st.text_input("🛒 쿠팡/네이버 상품 링크 (선택)", placeholder="물건 주소를 넣어주면 학우들이 더 잘 믿어요!")
+    contact = st.text_input("🔗 카카오톡 오픈채팅방 링크 (필수)", placeholder="학우들이 타고 들어올 링크를 넣어주세요!")
     
-    try:
-        response = execute_query(
-            st_supabase.table("diaries")
-            .select("*")
-            .eq("username", username)
-            .order("diary_date", desc=True)
-        )
-        if response.data:
-            for diary in response.data:
-                time_str = ""
-                if "created_at" in diary and diary["created_at"]:
-                    try:
-                        utc_time = datetime.fromisoformat(diary["created_at"].replace("Z", "+00:00"))
-                        kst_time = utc_time.astimezone(pytz.timezone("Asia/Seoul"))
-                        time_str = kst_time.strftime(" %H:%M")
-                    except:
-                        time_str = ""
+    # 📌 방장 인증용 비밀번호 칸 추가!
+    password = st.text_input("🔑 마감용 비밀번호 설정 (필수)", type="password", max_chars=4, placeholder="글을 마감할 때 쓸 숫자 4자리")
+    
+    submit = st.form_submit_button("🚀 반띵 모집 글 올리기")
 
-                with st.expander(f"📅 {diary['diary_date']}{time_str} | {diary['title']}"):
-                    st.write(diary['content'])
-        else:
-            st.info("아직 저장된 일기가 없습니다. 첫 기록을 남겨보세요!")
-    except Exception as e:
-        st.error("데이터를 불러오는 중 오류가 발생했습니다.")
+if submit:
+    if title and price and contact and password:
+        current_time = datetime.now().strftime("%m-%d %H:%M")
+        final_link = prod_link if prod_link else "링크 없음"
+        
+        new_post = {
+            "id": len(st.session_state.posts) + 1,
+            "등록시간": current_time,
+            "모집품목": title,
+            "인당 금액": price,
+            "픽업 장소": place,
+            "총인원": total_people,
+            "현재인원": 1,  
+            "비밀번호": password, # 입력한 비밀번호 저장
+            "상품 링크": final_link,
+            "오픈채팅 주소": contact
+        }
+        st.session_state.posts.insert(0, new_post)
+        st.success("🎉 모집 글이 성공적으로 등록되었습니다!")
+        st.balloons() 
+        st.rerun() 
+    else:
+        st.warning("비밀번호를 포함한 모든 필수 칸을 채워주세요! 🥺")
+
+st.markdown("---")
+st.subheader("💬 빌더(Builder)에게 한마디")
+st.write("“필요한 기능이나 버그 제보는 댓글이나 아래 오픈카톡으로 찔러주세요. 형이 심심할 때 업데이트해 줌.”")
+st.caption("© 2026 공주대학교 능력자 학우가 만든 순수 복지 프로젝트 - Ban-Thing")
