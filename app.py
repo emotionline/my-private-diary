@@ -18,17 +18,17 @@ st.markdown("""
         background-attachment: fixed;
     }
     
-    /* 글씨 가독성을 위한 반투명 화이트 패널 */
-    .block-container {
-        background: rgba(255, 255, 255, 0.85);
-        padding: 3rem 2rem !important;
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        margin-top: 2rem;
-        margin-bottom: 2rem;
-    }
+    # /* 글씨 가독성을 위한 반투명 화이트 패널 */
+    # .block-container {
+    #     background: rgba(255, 255, 255, 0.85);
+    #     padding: 3rem 2rem !important;
+    #     border-radius: 20px;
+    #     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    #     backdrop-filter: blur(4px);
+    #     -webkit-backdrop-filter: blur(4px);
+    #     margin-top: 2rem;
+    #     margin-bottom: 2rem;
+    # }
     
     h1, h2, h3, label, p {
         color: #1a252f !important;
