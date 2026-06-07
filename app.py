@@ -13,18 +13,25 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]   # ["supabase"] 그룹 추가!
 )
 
-# --- [3] 로그인 시스템 세팅 (최신 버전 완벽 대응) ---
-# 초기 테스트용 계정 (ID: admin / PW: 1234)
-credentials = {
-    "usernames": {
-        "admin": {
-            "email": "admin@example.com",
-            "name": "Tiger Focus",
-            "password": "1234"  
-        }
-    }
-}
+# --- [3] 로그인 시스템 세팅 영역의 마무리 ---
 
+# 최신 v0.3.x 버전에서는 login 함수를 호출할 때 
+# 화면의 어느 위치에 그릴지(location)를 명시해 주어야 합니다.
+# 또한, 반환값(Return value)이 기존 3개에서 최신 버전은 다를 수 있으므로 안전하게 처리합니다.
+
+try:
+    # 1. 최신 v0.3.x 버전 정석 호출 (위젯 위치와 버튼 텍스트 명시)
+    # 최신 버전은 함수 내부에서 세션 상태를 직접 핸들링하므로 굳이 3개의 반환값을 억지로 구조분해할지 않아도 됩니다.
+    authenticator.login(location='main', max_concurrent_users=1)
+    
+    # 0.3.x 버전에서 인증 상태와 유저 정보를 가져오는 올바른 방법은 세션 스테이트(st.session_state)를 확인하는 것입니다.
+    authentication_status = st.session_state.get("authentication_status")
+    username = st.session_state.get("username")
+    name = st.session_state.get("name")
+
+except TypeError:
+    # 2. 만약 위 코드가 안 먹히는 과도기적 버전일 경우를 대비한 롤백 코드
+    name, authentication_status, username = authenticator.login('로그인', 'main')
 # 최신 0.3.x 버전 스펙에 맞춘 명시적 인자 설정
 authenticator = stauth.Authenticate(
     credentials=credentials,              # credentials= 명시
