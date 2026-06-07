@@ -12,7 +12,7 @@ st.markdown("""
     <style>
     /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
     .stApp {
-        background-image: url("https://thumb.mt.co.kr/cdn-cgi/image/f=avif/21/2025/07/2025073118274074747_1.jpg");
+        background-image: url("https://img1.kakaocdn.net/thumb/R1280x0.fwebp/?fname=http://t1.kakaocdn.net/brunch/service/user/2enY/image/z4Zei61tiRRMv-yJmrIKZ139juo.jpeg");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
