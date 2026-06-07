@@ -12,7 +12,7 @@ st.markdown("""
     <style>
     /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
     .stApp {
-        background-image: url("https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=1200");
+        background-image: url("https://i.ytimg.com/vi/Me9tTDOfCOE/maxresdefault.jpg`");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -31,7 +31,7 @@ st.markdown("""
     # }
     
     h1, h2, h3, label, p {
-        color: #1a252f !important;
+        color: #2c3e50 !important;
         font-family: 'Pretendard', sans-serif;
         font-weight: 600;
     }
