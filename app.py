@@ -16,23 +16,23 @@ st_supabase = st.connection(
 # --- [3] DB에서 유저 정보 불러오기 함수 ---
 def fetch_users():
     try:
-        res = execute_query(st_supabase.table("users").select("*"))
+        # ttl=0 으로 실시간 동기화 강제
+        res = execute_query(st_supabase.table("users").select("*"), ttl=0)
         credentials = {"usernames": {}}
         if res.data:
             for user in res.data:
                 credentials["usernames"][user["username"]] = {
                     "email": user["email"],
                     "name": user["name"],
-                    "password": user["password"]  # DB에 저장된 해시 비밀번호
+                    "password": str(user["password"])  # 확실하게 문자열로 변환
                 }
         return credentials
     except Exception as e:
-        # 안전장치: 테이블이 비어있거나 에러 날 때 기본 계정 제공
-        return {"usernames": {"admin": {"email": "admin@a.com", "name": "Tiger", "password": "1234"}}}
+        return {"usernames": {}}
 
 credentials = fetch_users()
 
-# --- [4] 로그인 시스템 설정 (v0.2.3 규격) ---
+# --- [4] 로그인 시스템 설정 (v0.2.3 공식 규격) ---
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="diary_session",
@@ -40,11 +40,9 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=7
 )
 
-# 화면 인터페이스 분리 (탭 사용)
 tab1, tab2 = st.tabs(["🔒 로그인", "✍️ 회원가입"])
 
 with tab1:
-    # 0.2.3 버전의 올바른 로그인 호출 및 변수 할당 방식
     name, authentication_status, username = authenticator.login('로그인', 'main')
 
 with tab2:
@@ -59,8 +57,9 @@ with tab2:
             if new_username in credentials["usernames"]:
                 st.error("이미 존재하는 아이디입니다.")
             else:
-                # 0.2.3 버전 라이브러리가 가장 찰떡같이 인식하는 암호화(Hasher) 구문입니다.
-                hashed_password = stauth.Hasher([new_password]).generate()[0]
+                # 0.2.3 버전에서 오류 없이 매칭되는 해시화 정석 문법입니다.
+                hashed_passwords = stauth.Hasher([new_password]).encoded_passwords
+                hashed_password = hashed_passwords[0]
                 
                 new_user = {
                     "username": new_username,
@@ -71,21 +70,21 @@ with tab2:
                 
                 # Supabase DB에 유저 삽입
                 execute_query(st_supabase.table("users").insert(new_user))
-                st.success("회원가입이 완료되었습니다! 로그인 탭으로 이동해 접속하세요.")
+                st.success("회원가입이 완료되었습니다! 로그인 탭에서 접속하세요.")
                 st.balloons()
-                st.utility.rerun() if hasattr(st, "utility") else st.rerun()
+                st.rerun()
         else:
             st.warning("모든 항목을 입력해 주세요.")
 
 # --- [5] 화면 렌더링 분기 ---
 if authentication_status == False:
-    st.error("아이디 또는 비밀번호가 올바르지 않습니다. 다시 확인해 주세요.")
+    st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
 
 elif authentication_status == None:
-    st.info("단단한 기록 공간에 오신 것을 환영합니다. 서비스를 이용하려면 로그인해 주세요.")
+    st.info("로그인이 필요합니다. 기존 계정으로 로그인하거나 새로 가입해 주세요.")
 
 elif authentication_status:
-    # 로그인 성공 시 대시보드 열림
+    # 로그인 성공 시 일기장 대시보드 진입
     col1, col2 = st.columns([4, 1])
     with col1:
         st.subheader(f"✨ {name}님의 단단한 기록 공간")
@@ -94,7 +93,7 @@ elif authentication_status:
         
     st.divider()
 
-    # 일기 쓰기 영역
+    # 일기 작성 영역
     st.title("📝 오늘의 기록")
     diary_date = st.date_input("날짜 선택")
     diary_title = st.text_input("제목", placeholder="오늘을 관통하는 한 마디")
@@ -110,6 +109,7 @@ elif authentication_status:
             }
             execute_query(st_supabase.table("diaries").insert(row))
             st.success("클라우드 데이터베이스에 실시간 동기화되었습니다!")
+            st.rerun()
         else:
             st.warning("제목과 내용을 모두 입력해 주세요.")
 
