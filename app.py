@@ -5,33 +5,52 @@ from datetime import datetime
 import pytz
 
 # --- [1] 페이지 기본 세팅 ---
-st.set_page_config(page_title="My Bright Diary", page_icon="✨", layout="centered")
+st.set_page_config(page_title="My Video Diary", page_icon="✨", layout="centered")
 
-# --- [2] 아일릿 배경 테마 + 가독성 극대화 커스텀 CSS ---
-st.markdown("""
+# --- [2] 비디오 배경 주입 + 필름 제거 + 가독성 확보 CSS ---
+# ⚠️ 아래 "민주_영상_링크.mp4" 부분에 실제 mp4 파일 주소를 넣으시면 됩니다!
+VIDEO_URL = "https://assets.mixkit.co/videos/preview/mixkit-starry-outer-space-background-40019-large.mp4" # 예시 몽환적인 영상
+
+st.markdown(f"""
     <style>
-    /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
-    .stApp {
-        background-image: url("https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=1200"); /* 몽환적인 스파클/라이트 감성 배경 */
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }
+    /* 1. 영상 위에 올라가는 스트림릿 기본 배경을 투명하게 만듭니다. */
+    .stApp {{
+        background: transparent;
+    }}
     
-    /* 제목 및 텍스트 가독성 고정 */
-    h1, h2, h3, label, p {
-        color: #1a252f !important;
+    /* 2. 기존의 불투명했던 반투명 카드 필름을 완전히 삭제하고 투명하게 오픈 */
+    .block-container {{
+        background: transparent !important;
+        padding: 3rem 2rem !important;
+        margin-top: 2rem;
+    }}
+    
+    /* 3. 흰색 글씨가 영상 배경에 묻히지 않도록 글자 뒤에 쨍한 검은색 그림자 주입 */
+    h1, h2, h3, label, p, .stMarkdown {{
+        color: #ffffff !important;
         font-family: 'Pretendard', sans-serif;
-        font-weight: 600;
-    }
+        font-weight: 700 !important;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9), -2px -2px 8px rgba(0, 0, 0, 0.9) !important;
+    }}
     
-    /* 지난 기록 익스팬더 스타일 */
-    div[data-testid="stExpander"] {
-        background-color: rgba(255, 255, 255, 0.95) !important;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-    }
+    /* 4. 화면 전체를 덮는 비디오 태그 스타일 정의 */
+    #bg-video {{
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: -100; /* 맨 뒤로 보내기 */
+        background-size: cover;
+        object-fit: cover; /* 영상 비율 깨짐 방지 */
+    }}
     </style>
+    
+    <video autoplay loop muted playsinline id="bg-video">
+        <source src="{VIDEO_URL}" type="video/mp4">
+    </video>
 """, unsafe_allow_html=True)
 
 # --- [3] Supabase DB 연결 ---
