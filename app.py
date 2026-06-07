@@ -26,7 +26,7 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     }
     </style>
-""", unsafe-allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- [2] Supabase DB 연결 ---
 st_supabase = st.connection(
