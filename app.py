@@ -5,55 +5,67 @@ from datetime import datetime
 import pytz
 
 # --- [1] 페이지 기본 세팅 ---
-st.set_page_config(page_title="My Video Diary", page_icon="✨", layout="centered")
+st.set_page_config(page_title="My Music Diary", page_icon="📝", layout="centered")
 
-# --- [2] 비디오 배경 주입 + 필름 제거 + 가독성 확보 CSS ---
-# ⚠️ 아래 "민주_영상_링크.mp4" 부분에 실제 mp4 파일 주소를 넣으시면 됩니다!
-VIDEO_URL = "https://www.youtube.com/watch?v=SdHQkkRc-hc&list=RDSdHQkkRc-hc&start_radio=1" # 예시 몽환적인 영상
-
-st.markdown(f"""
+# --- [2] 아일릿 감성 배경 + 가독성 확보 CSS ---
+st.markdown("""
     <style>
-    /* 1. 영상 위에 올라가는 스트림릿 기본 배경을 투명하게 만듭니다. */
-    .stApp {{
-        background: transparent;
-    }}
-    
-    /* 2. 기존의 불투명했던 반투명 카드 필름을 완전히 삭제하고 투명하게 오픈 */
-    .block-container {{
-        background: transparent !important;
-        padding: 3rem 2rem !important;
-        margin-top: 2rem;
-    }}
-    
-    /* 3. 흰색 글씨가 영상 배경에 묻히지 않도록 글자 뒤에 쨍한 검은색 그림자 주입 */
-    h1, h2, h3, label, p, .stMarkdown {{
-        color: #ffffff !important;
-        font-family: 'Pretendard', sans-serif;
-        font-weight: 700 !important;
-        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9), -2px -2px 8px rgba(0, 0, 0, 0.9) !important;
-    }}
-    
-    /* 4. 화면 전체를 덮는 비디오 태그 스타일 정의 */
-    #bg-video {{
-        position: fixed;
-        right: 0;
-        bottom: 0;
-        min-width: 100%;
-        min-height: 100%;
-        width: auto;
-        height: auto;
-        z-index: -100; /* 맨 뒤로 보내기 */
+    /* 전체 배경에 아일릿 이미지 적용 및 센터 정렬 */
+    .stApp {
+        background-image: url("https://images.unsplash.com/photo-1518609878373-06d740f60d8b?q=80&w=1200");
         background-size: cover;
-        object-fit: cover; /* 영상 비율 깨짐 방지 */
-    }}
-    </style>
+        background-position: center;
+        background-attachment: fixed;
+    }
     
-    <video autoplay loop muted playsinline id="bg-video">
-        <source src="{VIDEO_URL}" type="video/mp4">
-    </video>
+    /* 글씨 가독성을 위한 반투명 화이트 패널 */
+    .block-container {
+        background: rgba(255, 255, 255, 0.85);
+        padding: 3rem 2rem !important;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    h1, h2, h3, label, p {
+        color: #1a252f !important;
+        font-family: 'Pretendard', sans-serif;
+        font-weight: 600;
+    }
+    
+    div[data-testid="stExpander"] {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
-# --- [3] Supabase DB 연결 ---
+# --- [3] 🎵 내 다이어리 배경음악(BGM) 설정 🎵 ---
+# 웹 브라우저 정책상 '음소거(muted)'가 아니면 자동 재생이 기본 차단되지만, 
+# 사용자가 화면을 한 번 클릭하거나 로그인 버튼을 누르는 순간 자물쇠가 풀리며 오디오가 재생됩니다!
+AUDIO_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" # ◀ 예시 오디오 파일 주소
+
+st.markdown(f"""
+    <audio autoplay loop id="bgm-audio" style="display:none;">
+        <source src="{AUDIO_URL}" type="audio/mp3">
+    </audio>
+    <script>
+    // 브라우저 자동재생 제한을 우회하기 위해 사용자가 화면을 클릭하면 소리가 나도록 유도하는 스크립트
+    document.body.addEventListener('click', function() {{
+        var audio = document.getElementById('bgm-audio');
+        if (audio && audio.paused) {{
+            audio.play();
+        }}
+    }});
+    </script>
+""", unsafe_allow_html=True)
+
+
+# --- [4] Supabase DB 연결 ---
 st_supabase = st.connection(
     name="supabase",
     type=SupabaseConnection,
@@ -61,7 +73,7 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]
 )
 
-# --- [4] DB에서 유저 정보 불러오기 ---
+# --- [5] DB에서 유저 정보 불러오기 ---
 def fetch_users():
     try:
         res = execute_query(st_supabase.table("users").select("*"), ttl=0)
@@ -79,7 +91,7 @@ def fetch_users():
 
 credentials = fetch_users()
 
-# --- [5] 로그인 시스템 설정 (v0.2.3 규격) ---
+# --- [6] 로그인 시스템 설정 ---
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="diary_session",
@@ -120,7 +132,7 @@ with tab2:
         else:
             st.warning("모든 항목을 입력해 주세요.")
 
-# --- [6] 로그인 성공 이후 대시보드 ---
+# --- [7] 로그인 성공 이후 대시보드 ---
 if authentication_status == False:
     st.error("아이디 또는 비밀번호가 올바르지 않습니다.")
 
@@ -136,13 +148,12 @@ elif authentication_status:
         
     st.divider()
 
-    # [핵심] 입력창 동적 초기화를 위한 세션 상태 등록
-    if "input_title" not in st.session_state:
-        st.session_state["input_title"] = ""
-    if "input_content" not in st.session_state:
-        st.session_state["input_content"] = ""
+    # 입력창 초기화 로직
+    if "diary_title_key" not in st.session_state:
+        st.session_state["diary_title_key"] = ""
+    if "diary_content_key" not in st.session_state:
+        st.session_state["diary_content_key"] = ""
 
-    # 일기 작성 영역 (value와 key를 세션 상태에 완전 밀착시켰습니다)
     st.title("📝 오늘의 기록")
     diary_date = st.date_input("날짜 선택")
     
@@ -157,16 +168,12 @@ elif authentication_status:
                 "title": diary_title,
                 "content": diary_content
             }
-            # Supabase 저장
             execute_query(st_supabase.table("diaries").insert(row))
             st.success("클라우드 데이터베이스에 실시간 동기화되었습니다!")
             st.balloons()
             
-            # [치트키] 입력창 전용 컴포넌트의 내부 state를 강제로 날려버립니다.
             st.session_state["diary_title_key"] = ""
             st.session_state["diary_content_key"] = ""
-            
-            # 화면 리프레시로 초기화 100% 반영
             st.rerun()
         else:
             st.warning("제목과 내용을 모두 입력해 주세요.")
