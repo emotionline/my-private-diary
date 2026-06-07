@@ -44,7 +44,7 @@ st.markdown("""
         border: 1px solid #e2e8f0;
     }
     </style>
-""", unsafe-allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- [3] Supabase DB 연결 ---
 st_supabase = st.connection(
