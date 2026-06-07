@@ -2,10 +2,10 @@ import streamlit as st
 import streamlit_authenticator as stauth
 from st_supabase_connection import SupabaseConnection, execute_query
 
-# --- [1] 페이지 기본 세팅 ---
-st.set_page_config(page_title="My Private Diary", page_icon="📝", layout="centered")
+# --- [1] 페이지 설정 ---
+st.set_page_config(page_title="My Web Diary", page_icon="📝", layout="centered")
 
-# --- [2] Supabase DB 연결 ---
+# --- [2] DB 연결 ---
 st_supabase = st.connection(
     name="supabase",
     type=SupabaseConnection,
@@ -13,50 +13,85 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]
 )
 
-# --- [3] 로그인 시스템 세팅 (v0.2.3 완벽 호환 스펙) ---
-credentials = {
-    "usernames": {
-        "admin": {
-            "email": "admin@example.com",
-            "name": "Tiger Focus",
-            "password": "1234" 
+# --- [3] DB에서 유저 정보 불러오기 함수 ---
+def fetch_users():
+    res = execute_query(st_supabase.table("users").select("*"))
+    credentials = {"usernames": {}}
+    for user in res.data:
+        credentials["usernames"][user["username"]] = {
+            "email": user["email"],
+            "name": user["name"],
+            "password": user["password"]
         }
-    }
-}
+    return credentials
 
-# v0.2.3 스펙: cookie_key가 아니라 그냥 key를 사용합니다.
+# 현재 DB에 있는 유저들 가져오기
+credentials = fetch_users()
+
+# --- [4] 로그인/회원가입 시스템 ---
 authenticator = stauth.Authenticate(
     credentials=credentials,
     cookie_name="diary_session",
-    key="secret_signature_key",  # ◀ key로 원복!
+    key="secret_signature_key",
     cookie_expiry_days=7
 )
 
-# v0.2.3 스펙: login 함수가 이름, 인증 상태, 유저명을 직접 반환합니다.
-name, authentication_status, username = authenticator.login('로그인', 'main')
+# 사이드바나 메인화면에 탭으로 분리
+tab1, tab2 = st.tabs(["로그인", "회원가입"])
 
-# --- [4] 화면 렌더링 분기 ---
+with tab1:
+    name, authentication_status, username = authenticator.login('로그인', 'main')
+
+with tab2:
+    st.subheader("새 계정 만들기")
+    new_email = st.text_input("이메일")
+    new_username = st.text_input("아이디(ID)")
+    new_name = st.text_input("이름(닉네임)")
+    new_password = st.text_input("비밀번호", type="password")
+    
+    if st.button("가입하기"):
+        if new_email and new_username and new_name and new_password:
+            # 1. 아이디 중복 체크
+            if new_username in credentials["usernames"]:
+                st.error("이미 존재하는 아이디입니다.")
+            else:
+                # 2. 비밀번호 암호화(Hashing) - 보안의 핵심!
+                hashed_password = stauth.Hasher([new_password]).generate()[0]
+                
+                # 3. DB에 저장
+                new_user = {
+                    "username": new_username,
+                    "email": new_email,
+                    "name": new_name,
+                    "password": hashed_password
+                }
+                execute_query(st_supabase.table("users").insert(new_user))
+                st.success("회원가입 성공! 로그인 탭에서 접속하세요.")
+                st.balloons()
+                st.rerun() # 새로고침해서 유저 정보 갱신
+        else:
+            st.warning("모든 정보를 입력해주세요.")
+
+# --- [5] 로그인 성공 이후 로직 ---
 if authentication_status == False:
     st.error("비밀번호가 올바르지 않습니다.")
-
 elif authentication_status == None:
-    st.warning("로그인이 필요합니다. 아이디(admin)와 비밀번호(1234)를 입력해주세요.")
-
+    st.info("기존 아이디로 로그인하거나 새로 가입해 보세요!")
 elif authentication_status:
-    # 로그인 성공 시 대시보드 진입
+    # (이하 일기 쓰기/불러오기 로직은 동일합니다)
     col1, col2 = st.columns([4, 1])
     with col1:
         st.subheader(f"✨ {name}님의 단단한 기록 공간")
     with col2:
         authenticator.logout("로그아웃", "main")
-        
+    
     st.divider()
-
-    # 인터페이스 1: 일기 쓰기
+    
+    # 일기 작성 UI
     st.title("📝 오늘의 기록")
     diary_date = st.date_input("날짜 선택")
-    diary_title = st.text_input("제목", placeholder="오늘을 관통하는 한 마디")
-    diary_content = st.text_area("내용", placeholder="생각과 감정을 차분히 정돈해 보세요.", height=250)
+    diary_title = st.text_input("제목")
+    diary_content = st.text_area("내용", height=200)
 
     if st.button("일기 저장하기", type="primary"):
         if diary_title and diary_content:
@@ -66,31 +101,17 @@ elif authentication_status:
                 "title": diary_title,
                 "content": diary_content
             }
-            # Supabase에 실시간 insert
             execute_query(st_supabase.table("diaries").insert(row))
-            st.success("클라우드 데이터베이스에 동기화되었습니다!")
-            st.balloons()
+            st.success("성공적으로 저장되었습니다!")
         else:
-            st.warning("제목과 내용을 모두 입력해 주세요.")
+            st.warning("내용을 입력해주세요.")
 
     st.divider()
-
-    # 인터페이스 2: 일기 피드 불러오기 (PC/모바일 실시간 연동 확인용)
-    st.subheader("📂 지난 기록 들여다보기")
-    
-    try:
-        response = execute_query(
-            st_supabase.table("diaries")
-            .select("*")
-            .eq("username", username)
-            .order("diary_date", desc=True)
-        )
-        
-        if response.data:
-            for diary in response.data:
-                with st.expander(f"📅 {diary['diary_date']} | {diary['title']}"):
-                    st.write(diary['content'])
-        else:
-            st.info("아직 저장된 일기가 없습니다. 첫 기록을 남겨보세요!")
-    except Exception as e:
-        st.error("데이터를 불러오는 중 오류가 발생했습니다. DB 설정을 확인해 주세요.")
+    st.subheader("📂 나의 지난 기록")
+    response = execute_query(
+        st_supabase.table("diaries").select("*").eq("username", username).order("diary_date", desc=True)
+    )
+    if response.data:
+        for diary in response.data:
+            with st.expander(f"📅 {diary['diary_date']} | {diary['title']}"):
+                st.write(diary['content'])
