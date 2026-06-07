@@ -13,7 +13,7 @@ st_supabase = st.connection(
     key=st.secrets["supabase"]["SUPABASE_KEY"]   # ["supabase"] 그룹 추가!
 )
 
-# --- [3] 로그인 시스템 세팅 ---
+# --- [3] 로그인 시스템 세팅 (최신 버전 완벽 대응) ---
 # 초기 테스트용 계정 (ID: admin / PW: 1234)
 credentials = {
     "usernames": {
@@ -25,15 +25,16 @@ credentials = {
     }
 }
 
+# 최신 0.3.x 버전 스펙에 맞춘 명시적 인자 설정
 authenticator = stauth.Authenticate(
-    credentials,
+    credentials=credentials,              # credentials= 명시
     cookie_name="diary_session",
     key="secret_signature_key",
     cookie_expiry_days=7
 )
 
+# login 함수도 인자 없이 깔끔하게 호출해 줍니다.
 name, authentication_status, username = authenticator.login()
-
 # --- [4] 화면 렌더링 분기 ---
 if authentication_status == False:
     st.error("비밀번호가 올바르지 않습니다.")
